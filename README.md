@@ -1,9 +1,72 @@
 # evdevice 0.1 Alpha
 
-Raspberry pi adapter for OCPP 1.6. http://www.ibeyonde.com/ocpp-compliant-openevse/
+This code emulates the serial communication between OpenEVSE and OCPP module. To run this on debian or any other flavour of linux you need to satisfy following dependencies. The isntructions will be for debian for centOS/RedHat you will need similar commands specific to that os:
 
-This will work with the custom raspbian image (not provided). 
 
-It is combination of headless device http://www.ibeyonde.com/headless-devices/  and OCPP 1.6 implementation tested against open source steve http://sip.ibeyonde.com:5083/steve/manager/signin  (admin/1234). 
+Step 1
 
-OCPP 1.6 implementation is not exhaustive at this point.
+Install pre-requisite packages.
+
+apt-get update
+apt-get -y -q upgrade
+locale-gen en_US.UTF-8
+
+apt-get install lsb-release apt-transport-https ca-certificates
+wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/php7.3.list
+apt-get update
+	
+apt-get -y install php php-cgi php-sqlite3 php7.0-fpm php-pear sqlite3 lighttpd python-pip git
+pip install serial pathlib python-dateutil websocket-client
+
+lighty-enable-mod fastcgi
+lighty-enable-mod fastcgi-php
+service lighttpd force-reload
+
+apt-get -y -q autoremove
+apt-get clean
+
+Step 2
+
+Clone this repo, preferably in root folder. Instructions will assume that the git repo resides in '/root/evdevice'.
+
+git clone https://github.com/gitibeyonde/evdevice.git
+
+chown -R www-data:www-data /root/evdevice
+chmod -R 775 /root/evdevice
+usermod -a -G www-data root
+
+
+Step 3
+
+Setup sqlite DBs. You need to setup two databases one for items that will presist on the sd-card, the other one ephemeral that lives in shared memory and is retained till the information is is sent and acknowledged by the server.
+
+a. Config DB
+
+touch /root/.db.db
+
+chown www-data /root/.db.db
+chgrp www-data /root/.db.db
+chmod 776 /root/.db.db
+
+sqlite3 /root/.db.db "CREATE TABLE IF NOT EXISTS config ( name TEXT PRIMARY KEY, value TEXT, type TEXT, desc TEXT, created_at INTEGER);"
+sqlite3 /root/.db.db "CREATE TABLE IF NOT EXISTS reservation ( id INTEGER PRIMARY KEY, connector INTEGER, idtag TEXT, status TEXT, expiry INTEGER, created INTEGER);"
+sqlite3 /root/.db.db "INSERT INTO config VALUES('heartbeatInterval', 120, 'INTEGER', '', datetime());"
+
+
+b. Ephemeral DB
+
+touch /root/evdevice/http/slave/motion/.db.db  # Map /root/evdevice/http/slave/motion to shared memory
+
+sqlite3 /root/evdevice/http/slave/motion/.db.dbb "CREATE TABLE IF NOT EXISTS config ( name TEXT PRIMARY KEY, value TEXT, type TEXT, desc TEXT, created_at INTEGER);"
+sqlite3 /root/evdevice/http/slave/motion/.db.db "CREATE TABLE IF NOT EXISTS reservation ( id INTEGER PRIMARY KEY, connector INTEGER, idtag TEXT, status TEXT, expiry INTEGER, created INTEGER);"
+sqlite3 /root/evdevice/http/slave/motion/.db.db "INSERT INTO config VALUES('heartbeatInterval', 120, 'INTEGER', '', datetime());"
+
+chown www-data /root/evdevice/http/slave/motion/.db.db
+chgrp www-data /root/evdevice/http/slave/motion/.db.db
+chmod 776 /root/evdevice/http/slave/motion/.db.db
+
+
+Step 4
+
+Run occp.py in evdevice/ocpp folder. This will start the process that listens to status changes form OpenEVSE and contacts OCPP server to pass on information if required.
