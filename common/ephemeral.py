@@ -21,7 +21,7 @@ else:
     uuid = "unknown"
 
     
-class Euphemeral:
+class Ephemeral:
     properties = { }
     
     def __init__(self):

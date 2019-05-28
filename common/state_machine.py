@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 
-import euphemeral
+import ephemeral
 import logging
 import time
 
 logging.getLogger().setLevel(logging.DEBUG)
-tstore = euphemeral.Euphemeral()
+tstore = ephemeral.Ephemeral()
 
 class StateMachine:
 
