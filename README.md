@@ -69,4 +69,27 @@ chmod 776 /root/evdevice/http/slave/motion/.db.db
 
 Step 4
 
+Setup OCPP Server (Steve) and the emulator device.
+
+On the Steve add a device, by choosing a uuid.
+Set this uuid in evdevice/.uuid file.
+
+Step 5
+
+Setup users in Steve. 
+
+Step 6
+
 Run occp.py in evdevice/ocpp folder. This will start the process that listens to status changes form OpenEVSE and contacts OCPP server to pass on information if required.
+
+Step 5.
+
+You can simulate openEVSE by running commands like "./cmdln.py rfid <id of user set in step 5>" in evdevice/ocpp folder. For exampole this command will send an Authorize request to OCPP 1.5J server implementation.
+
+./cmdln.py connect
+./cmdln.py start
+./cmdln.py stop
+./cmdln.py disconnect
+
+The above commands will simulate typical openEVSE charging session.
+
