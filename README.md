@@ -28,9 +28,9 @@ apt-get clean
 
 Step 2
 
-Clone this repo, preferably in root folder. Instructions will assume that the git repo resides in '/root/evdevice'.
+Clone this repo, preferably in root folder. Instructions will assume that the git repo resides in '/root/'.
 
-git clone https://github.com/gitibeyonde/evdevice.git
+git clone https://github.com/gitibeyonde/openevse-ocpp.git evdevice
 
 chown -R www-data:www-data /root/evdevice
 chmod -R 775 /root/evdevice
