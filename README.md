@@ -1,6 +1,6 @@
 # evdevice 0.1 Alpha
 
-This code emulates the serial communication between OpenEVSE and OCPP module. To run this on debian or any other flavour of linux you need to satisfy following dependencies. The isntructions will be for debian for centOS/RedHat you will need similar commands specific to that os:
+This code emulates the serial communication between OpenEVSE and OCPP module. To run this on debian or any other flavour of linux you need to satisfy following dependencies. The instructions will be for debian(stretch or jessie) for centOS/RedHat you will need similar commands specific to that os:
 
 
 Step 1
@@ -30,7 +30,7 @@ Step 2
 
 Clone this repo, preferably in root folder. Instructions will assume that the git repo resides in '/root/'.
 
-git clone https://github.com/gitibeyonde/openevse-ocpp.git evdevice
+git clone https://<your-github-userid>@github.com/gitibeyonde/openevse-ocpp.git evdevice
 
 chown -R www-data:www-data /root/evdevice
 chmod -R 775 /root/evdevice
@@ -73,16 +73,19 @@ Setup OCPP Server (Steve) and the emulator device.
 
 On the Steve add a device, by choosing a uuid.
 Set this uuid in evdevice/.uuid file.
+Setup users in Steve. 
+Make changes to ocpp.py to SIP setting on top of the file. [TODO] move to config file
+
+OR
+
+Use the pre-installed one at http://sip.ibeyonde.com:880/steve/manager/home. This is already configured in ocpp.py.
+write to info@ibeyonde.com to add your device and users.
 
 Step 5
 
-Setup users in Steve. 
-
-Step 6
-
 Run occp.py in evdevice/ocpp folder. This will start the process that listens to status changes form OpenEVSE and contacts OCPP server to pass on information if required.
 
-Step 5.
+Step 6
 
 You can simulate openEVSE by running commands like "./cmdln.py rfid <id of user set in step 5>" in evdevice/ocpp folder. For exampole this command will send an Authorize request to OCPP 1.5J server implementation.
 
