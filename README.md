@@ -5,6 +5,7 @@ This code emulates the serial communication between OpenEVSE and OCPP module. To
 
 Step 1
 
+Assuming you have latest version of debian with python 3 installed.
 Install pre-requisite packages.
 
 apt-get update
@@ -83,7 +84,9 @@ write to info@ibeyonde.com to add your device and users.
 
 Step 5
 
-Run occp.py in evdevice/ocpp folder. This will start the process that listens to status changes form OpenEVSE and contacts OCPP server to pass on information if required.
+Run ocpp.py in evdevice/ocpp folder. 
+./ocpp.py   #this will work with python 3
+This will start the process that listens to status changes form OpenEVSE and contacts OCPP server to pass on information if required.
 
 Step 6
 
