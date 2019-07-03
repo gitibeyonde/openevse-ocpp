@@ -13,16 +13,17 @@ apt-get -y -q upgrade
 locale-gen en_US.UTF-8
 
 apt-get install lsb-release apt-transport-https ca-certificates
-wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
-echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/php7.3.list
+#wget -O /etc/apt/trusted.gpg.d/php.gpg https://packages.sury.org/php/apt.gpg
+#echo "deb https://packages.sury.org/php/ $(lsb_release -sc) main" | sudo tee /etc/apt/sources.list.d/php7.3.list
 apt-get update
 	
-apt-get -y install php php-cgi php-sqlite3 php7.0-fpm php-pear sqlite3 lighttpd python-pip git
+apt-get -y install sqlite3 python-pip git python-dateutil
+#apt-get -y install php php-cgi php-sqlite3 php7.0-fpm php-pear lighttpd
 pip install serial pathlib python-dateutil websocket-client
 
-lighty-enable-mod fastcgi
-lighty-enable-mod fastcgi-php
-service lighttpd force-reload
+#lighty-enable-mod fastcgi
+#lighty-enable-mod fastcgi-php
+#service lighttpd force-reload
 
 apt-get -y -q autoremove
 apt-get clean
@@ -32,6 +33,8 @@ Step 2
 Clone this repo, preferably in root folder. Instructions will assume that the git repo resides in '/root/'.
 
 git clone https://<your-github-userid>@github.com/gitibeyonde/openevse-ocpp.git evdevice
+
+IF the above repo is private then you need to provide login and password for github to clone it.
 
 chown -R www-data:www-data /root/evdevice
 chmod -R 775 /root/evdevice
@@ -57,6 +60,8 @@ sqlite3 /root/.db.db "INSERT INTO config VALUES('heartbeatInterval', 120, 'INTEG
 
 b. Ephemeral DB
 
+mkdir -p /root/evdevice/http/slave/motion
+
 touch /root/evdevice/http/slave/motion/.db.db  # Map /root/evdevice/http/slave/motion to shared memory
 
 sqlite3 /root/evdevice/http/slave/motion/.db.dbb "CREATE TABLE IF NOT EXISTS config ( name TEXT PRIMARY KEY, value TEXT, type TEXT, desc TEXT, created_at INTEGER);"
@@ -72,10 +77,8 @@ Step 4
 
 Setup OCPP Server (Steve) and the emulator device.
 
-On the Steve add a device, by choosing a uuid.
-Set this uuid in evdevice/.uuid file.
-Setup users in Steve. 
-Make changes to ocpp.py to SIP setting on top of the file. [TODO] move to config file
+On the Steve add a device, by choosing a uuid. # opptitest is a existing user on demo steve, u can use it temporarily
+Set this uuid in evdevice/.uuid file. #for example $echo 'opptitest' > evdevice/.uuid
 
 OR
 
@@ -92,6 +95,7 @@ Step 6
 
 You can simulate openEVSE by running commands like "./cmdln.py rfid <id of user set in step 5>" in evdevice/ocpp folder. For exampole this command will send an Authorize request to OCPP 1.5J server implementation.
 
+./cmdln.py rfid d6gsNICFc5UQq4mxwpnV # you can use this id, it is precreated on demo server
 ./cmdln.py connect
 ./cmdln.py start
 ./cmdln.py stop

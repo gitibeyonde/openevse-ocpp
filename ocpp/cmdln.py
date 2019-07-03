@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 import sys
 import logging
@@ -17,7 +17,7 @@ serial_cmd = dir_path + '/http/slave/motion/scmd'
 serial_resp = dir_path + '/http/slave/motion/sresp'
 
 def help():
-    print("Commands: RFID <name>; Start; Stop;")
+    print("Commands: rfid <name>; Start; Stop;")
 
    
 ocpp_cmd = AsyncCom(AsyncCom.OCPP_CMD_FILE)

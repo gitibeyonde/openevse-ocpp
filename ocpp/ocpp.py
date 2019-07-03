@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 
 from pprint import pprint
 from datetime import datetime, timedelta
