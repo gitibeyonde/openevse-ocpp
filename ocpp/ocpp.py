@@ -43,7 +43,7 @@ req = None
 registry = None
 conf = None
 ws = None
-SIP = 'sip.ibeyonde.com'
+SIP = os.popen('cat ../system.properties | grep ocpp_server  | cut -d"=" -f 2').read()
 
 ocpp_cmd = AsyncCom(AsyncCom.OCPP_CMD_FILE)
 ocpp_resp = AsyncCom(AsyncCom.OCPP_RESP_FILE)
@@ -133,15 +133,16 @@ def on_message(ws, message):
             else:
                 logging.info ("Unknown server_resp " + cmd_name)
     except:
+        logging.warn ("Bad server_resp ")
         traceback.print_exc()
     
 
 def on_error(ws, error):
-    logging.info("Error received %s" % error)
+    logging.info("on_error: Error received %s" % error)
 
 
 def on_close(ws):
-    logging.info ("### closed ")
+    logging.info ("on_close: ### closed ")
 
 
 def on_open(ws):
@@ -246,7 +247,7 @@ def main():
         registry = request_registry.RequestRegistry()
             
         websocket.enableTrace(True)
-        ws = websocket.WebSocketApp("ws://" + SIP + ":880/steve/websocket/CentralSystemService/" + uuid,
+        ws = websocket.WebSocketApp("ws://" + SIP + "/steve/websocket/CentralSystemService/" + uuid,
                                     on_message=on_message,
                                     on_error=on_error,
                                     on_close=on_close,
