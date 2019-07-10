@@ -43,3 +43,16 @@ You can simulate openEVSE by running commands like "./cmdln.py rfid <id of user 
 
 The above commands will simulate typical openEVSE charging session.
 
+
+Step 6
+
+Setup the serial connection on raspberry pi to connect to openevse. You will need a level shifter to be able to do that. ref: https://www.sparkfun.com/products/12009
+
+The respberrypi side of the serial port runs optimally at 0 to 3.3V while at the openevse end they run at 0 to 5V. The Tx (physical pin 8) and Rx (physical pin 10) pins on raspberry pi
+need to be connected to the LV pins while the Tx and Rx of the OpenEVSE needs to be connected to HV pins of the level shifter. Note that Tx of Pi needs to connect to Rx or OpenEVSE and similary for the other serial port. 
+
+Also connect the Raspberry pi's physical pin 4 (5V input) and 6 (Gnd) to the corresponding power pins on openEVSE.
+
+Edit system.properties and change the line "capability=OPENEVSE_EMULATOR" to "capability=OPENEVSE". This will enable the serial port to openEVSE. Now you are all set to interact with openEVSE.
+
+For any queries contact info@ibeyonde.com
