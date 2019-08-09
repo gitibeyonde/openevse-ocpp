@@ -44,6 +44,7 @@ registry = None
 conf = None
 ws = None
 SIP = os.popen('cat ../system.properties | grep ocpp_server  | cut -d"=" -f 2').read()
+SSL = os.popen('cat ../system.properties | grep ssl_enabled  | cut -d"=" -f 2').read()
 
 ocpp_cmd = AsyncCom(AsyncCom.OCPP_CMD_FILE)
 ocpp_resp = AsyncCom(AsyncCom.OCPP_RESP_FILE)
@@ -245,13 +246,21 @@ def main():
         conf = datastore.Datastore()
         client_cmd = client_call.ClientCall(conf)
         registry = request_registry.RequestRegistry()
-            
-        websocket.enableTrace(True)
-        ws = websocket.WebSocketApp("ws://" + SIP + "/steve/websocket/CentralSystemService/" + uuid,
-                                    on_message=on_message,
-                                    on_error=on_error,
-                                    on_close=on_close,
-                                    header=[ "Sec-WebSocket-Protocol: ocpp1.5"])
+        
+        if "yes" in SSL.casefold():
+            websocket.enableTrace(True)
+            ws = websocket.WebSocketApp("wss://" + SIP + "/steve/websocket/CentralSystemService/" + uuid,
+                                        on_message=on_message,
+                                        on_error=on_error,
+                                        on_close=on_close,
+                                        header=[ "Sec-WebSocket-Protocol: ocpp1.5"])
+        else:
+            websocket.enableTrace(True)
+            ws = websocket.WebSocketApp("ws://" + SIP + "/steve/websocket/CentralSystemService/" + uuid,
+                                        on_message=on_message,
+                                        on_error=on_error,
+                                        on_close=on_close,
+                                        header=[ "Sec-WebSocket-Protocol: ocpp1.5"])
         ws.on_open = on_open
         ws.run_forever()
     except:
