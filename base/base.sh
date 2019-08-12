@@ -13,7 +13,7 @@ locale-gen en_US.UTF-8
 
 apt-get install lsb-release apt-transport-https ca-certificates
 apt-get -y install sqlite3 python-pip git python-dateutil
-pip install serial pathlib python-dateutil websocket-client
+pip install pathlib python-dateutil websocket-client pyserial
 
 apt-get -y -q autoremove
 apt-get clean
