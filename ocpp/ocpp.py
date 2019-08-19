@@ -247,7 +247,7 @@ def main():
         client_cmd = client_call.ClientCall(conf)
         registry = request_registry.RequestRegistry()
         
-        if "yes" in SSL.casefold():
+        if "yes" in SSL.lower():
             websocket.enableTrace(True)
             ws = websocket.WebSocketApp("wss://" + SIP + "/steve/websocket/CentralSystemService/" + uuid,
                                         on_message=on_message,

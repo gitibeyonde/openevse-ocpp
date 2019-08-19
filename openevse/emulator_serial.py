@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python
 """
  **** RAPI protocol ****
 Fx - function
@@ -160,6 +160,7 @@ import pathlib
 import sys
 import _thread
 import logging
+import random
 
 logging.getLogger().setLevel(logging.DEBUG)
 
@@ -297,7 +298,8 @@ class Serial:
             print("Length of command is " + str(len(rv)))
         
         print(p1, p2)
-        
+        if random.random() > 0.5:
+            return self.encode("$NK 0 0") 
         if request_for == '$FF':
             response = "$OK 20"
         elif request_for == '$FB':

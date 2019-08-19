@@ -807,11 +807,15 @@ if SERIAL:
                     return False, []
             else:
                 response = self._read_line()
-                print ("809 response", response)
+                print ("810 response", response)
                 response_match = self.respose_regex.match(response)
-                print("810 response_match", response_match)
+                print("812 response_match", response_match)
                 if response_match is not None:
-                    return response_match.group('status') == 'OK', (response_match.group('args') or '').split()
+                    if response_match.group('status') == 'OK':
+                        return True, (response_match.group('args') or '').split()
+                    else:
+                        print("FATL: 817 reponse is NK");
+                        return response_match.group('status') == 'NK', (response_match.group('args') or '').split()
                 else:
                     if response[:3] == '$ST':
                         new_status = states[int(response.split()[1], 16)]
