@@ -56,7 +56,7 @@ fi
 
  
 
-sqlite3 ${EVDEVICE_DIR}/http/slave/motion/.db.dbb "CREATE TABLE IF NOT EXISTS config ( name TEXT PRIMARY KEY, value TEXT, type TEXT, desc TEXT, created_at INTEGER);"
+sqlite3 ${EVDEVICE_DIR}/http/slave/motion/.db.db "CREATE TABLE IF NOT EXISTS config ( name TEXT PRIMARY KEY, value TEXT, type TEXT, desc TEXT, created_at INTEGER);"
 sqlite3 ${EVDEVICE_DIR}/http/slave/motion/.db.db "CREATE TABLE IF NOT EXISTS reservation ( id INTEGER PRIMARY KEY, connector INTEGER, idtag TEXT, status TEXT, expiry INTEGER, created INTEGER);"
 sqlite3 /root/evdevice/http/slave/motion/.db.db "REPLACE INTO config VALUES('heartbeatInterval', 120, 'INTEGER', '', datetime());"
 
