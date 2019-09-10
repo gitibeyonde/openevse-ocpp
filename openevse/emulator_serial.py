@@ -307,18 +307,18 @@ class Serial:
             lcd_color = int(p1)
         elif request_for == '$FD':
             state = _state_function['FD']
-            response =  "$OK " + str(state)  #disable EVSE
+            response =  "$ST " + str(state)  #disable EVSE
         elif request_for == '$FE':
             state = _state_function['FE']
-            response =  "$OK " + str(state)  #enable EVSE
+            response =  "$ST " + str(state)  #enable EVSE
         elif request_for == '$FS':
             state = _state_function['FS']
-            response =  "$OK " + str(state)  #sleep EVSE
+            response =  "$ST " + str(state)  #sleep EVSE
         elif request_for == '$FR':
             state = _state_function['FR']
-            response =  "$OK " + str(state)  #reset EVSE
+            response =  "$ST " + str(state)  #reset EVSE
         elif request_for == '$FP':
-            response =  "$OK 2"  #enable EVSE
+            response =  "$ST 2"  #enable EVSE
             print("LCD " + p1 + " " + p2)
         elif request_for == '$G3':
             response =  "$OK 2"  # response: OK cnt
