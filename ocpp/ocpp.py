@@ -12,7 +12,6 @@ import logging
 import traceback
 import json
 import ast
-import client_call
 import request_registry
 import client_call
 import client_reply
@@ -48,13 +47,14 @@ SSL = os.popen('cat ../system.properties | grep ssl_enabled  | cut -d"=" -f 2').
 
 ocpp_cmd = AsyncCom(AsyncCom.OCPP_CMD_FILE)
 ocpp_resp = AsyncCom(AsyncCom.OCPP_RESP_FILE)
+openevse_serial = openevse.SerialOpenEVSE()
+clientReply = client_reply.ClientReply()
 
 sm = StateMachine()
 
 def on_message(ws, message):
     global registry
-    global server_resp
-    global client_cmd
+    global clientReply
     global conf
     
     try:
@@ -62,56 +62,69 @@ def on_message(ws, message):
         with open(log_file_name, 'a') as f: f.write('>>' + message + '</br>\n')
         mv = ast.literal_eval(message)
         muuid = mv[1]
-        if mv[0] == 2: 
+        if mv[0] == 2:  #### CALLS FROM SERVER #######
             print("Received server_resp " + str(mv[1]) + str(mv[2]))  
             if mv[2] == 'ReserveNow':
                 # [2,"77cacf94-72f2-4e47-a4c7-380dec56b889","ReserveNow",{"connectorId":1,"expiryDate":"2017-10-31T17:09:00.000Z","idTag":"1234","reservationId":6}]
-                cmd = server_reply.ServerReply(mv[1], mv[2], mv[3])
-                logging.info("Reservation Id " + str(cmd.getReservationId()))
-                logging.info("Reservation Expiry " + str(cmd.getReservationExpiry().utcnow()))
-                logging.info("Connector Id " + str(cmd.getReservationConnectorId()))
-                logging.info("Id Tag " + cmd.getReservationIdTag())
-                
-                conf.setReservation(cmd.getReservationId(), cmd.getReservationConnectorId(), cmd.getReservationIdTag(), utils.timestamp(cmd.getReservationExpiry()), utils.timestamp(datetime.utcnow()))
-        
-                sendReply(ws, server_resp.getStatus(mv[1], "Accepted"))
+                serverCall = server_call.ServerCall(mv[1], mv[2], mv[3])
+                logging.info("Reservation Id " + str(serverCall.getReservationId()))
+                logging.info("Reservation Expiry " + str(serverCall.getReservationExpiry().utcnow()))
+                logging.info("Connector Id " + str(serverCall.getReservationConnectorId()))
+                logging.info("Id Tag " + serverCall.getReservationIdTag())
+                conf.setReservation(serverCall.getReservationId(), serverCall.getReservationConnectorId(), serverCall.getReservationIdTag(), utils.timestamp(cmd.getReservationExpiry()), utils.timestamp(datetime.utcnow()))
+                sendReply(ws, clientReply.getStatus(mv[1], "Accepted"))
             elif mv[2] == 'CancelReservation':
                 # [2,"54762587-30c9-4cbd-b1be-aa3458e089db","CancelReservation",{"reservationId":6}]
-                cmd = server_resp.ServerReply(mv[1], mv[2], mv[3])
-                logging.info("Reservation Id " + str(cmd.getReservationId()))
-                datastore.cancelReservation(cmd.getReservationId())
-                sendReply(ws, server_resp.getStatus(mv[1], "Accepted"))
+                serverCall = server_call.ServerCall(mv[1], mv[2], mv[3])
+                logging.info("Reservation Id " + str(serverCall.getReservationId()))
+                datastore.cancelReservation(serverCall.getReservationId())
+                sendReply(ws, clientReply.getStatus(mv[1], "Accepted"))
             elif mv[2] == 'ClearCache':
-                sendReply(ws, server_resp.getStatus(mv[1], "Accepted"))
+                sendReply(ws, clientReply.getStatus(mv[1], "Accepted"))
             elif mv[2] == 'GetConfiguration':
-                sendReply(ws, server_resp.getStatus(mv[1], "Accepted"))
-        elif mv[0] == 3:
+                sendReply(ws, clientReply.getStatus(mv[1], "Accepted"))
+            elif mv[2] == 'ChangeAvailability':
+                serverCall = server_call.ServerCall(mv[1], mv[2], mv[3])
+                connectorId, type = serverCall.getChangeAvailability()
+                #ignoring connector id, as with OpenEVSE there is only one connector
+                if type == "Operative":
+                    result = openevse_serial.status('enable')
+                    if result == "connected":
+                        logging.info("OpenEVSE response = %s" % result)
+                        sendReply(ws, clientReply.getStatus(mv[1], "Accepted"))
+                elif type == "Inoperative":
+                    result = openevse_serial.status('disable')
+                    if result == "disabled":
+                        logging.info("OpenEVSE response = %s" % result)
+                        sendReply(ws, clientReply.getStatus(mv[1], "Accepted"))
+                    
+        elif mv[0] == 3:  #### SERVER RESPONSES ######
             logging.info("Received server_resp " + str(mv[2]))
             cmd = registry.get(muuid)
             cmd_name = cmd[2]
             logging.info ("For server_resp name = " + cmd[2])
-            resp = server_reply.ServerReply(muuid, message)
+            serverReply = server_reply.ServerReply(muuid, message)
             if cmd_name == "BootNotification":
-                logging.info ("BootNotification=" + resp.getBootNotficationStatus())
-                logging.info ("HB Interval=" + str(resp.getHeartbeatInterval()))
+                logging.info ("BootNotification=" + serverReply.getBootNotficationStatus())
+                logging.info ("HB Interval=" + str(serverReply.getHeartbeatInterval()))
             elif cmd_name == "Heartbeat":
-                logging.info ("HB received Server time = " + str(resp.getCurrentTime()))
+                logging.info ("HB received Server time = " + str(serverReply.getCurrentTime()))
             elif cmd_name == "StatusNotification":
                 logging.info ("StatusNotification received....")
             elif cmd_name == "Authorize":
-                logging.info ("StatusNotification received...." + str(resp.getAuthorize()))
-                ocpp_resp.write(cmd_name, str(resp.getAuthorize()))
-                if resp.getAuthorize() != "Accepted": sm.reset()
+                logging.info ("StatusNotification received...." + str(serverReply.getAuthorize()))
+                ocpp_resp.write(cmd_name, str(serverReply.getAuthorize()))
+                if serverReply.getAuthorize() != "Accepted": sm.reset()
             elif cmd_name == "StartTransaction":
-                logging.info ("StatusNotification received...." + str(resp.getStatus()) + str(resp.getStartTransactionId()))
-                ocpp_resp.write(cmd_name, str(resp.getStartTransactionId()))
-                sm.startCharging(resp.getStartTransactionId())
+                logging.info ("StatusNotification received...." + str(serverReply.getStatus()) + str(serverReply.getStartTransactionId()))
+                ocpp_resp.write(cmd_name, str(serverReply.getStartTransactionId()))
+                sm.startCharging(serverReply.getStartTransactionId())
             elif cmd_name == "StopTransaction":
-                logging.info ("StopNotification received...." + str(resp.getStatus()))
-                ocpp_resp.write(cmd_name, str(resp.getStatus()))
+                logging.info ("StopNotification received...." + str(serverReply.getStatus()))
+                ocpp_resp.write(cmd_name, str(serverReply.getStatus()))
             else:
                 logging.info ("Unknown server_resp " + cmd_name)
-        elif mv[0] == 4:
+        elif mv[0] == 4:  ### ERRORS ####
             cmd = registry.get(muuid)
             cmd_name = cmd[2]
             logging.info("FATAL  Error for server_resp " + cmd_name + ":" + str(mv[2]) + " == " + str(mv[3]))
@@ -178,9 +191,9 @@ def on_open(ws):
 
         def checkOpenEvse():
             global tstore
+            global openevse
             
             logging.info("created= openevse.SerialOpenEVSE()")
-            openevse_serial = openevse.SerialOpenEVSE()
             while True:
                 try:
                     time.sleep(1)
@@ -243,8 +256,7 @@ def main():
     
     try:
         uuid = utils.getUuid()
-        conf = datastore.Datastore()
-        client_cmd = client_call.ClientCall(conf)
+        client_cmd = client_call.ClientCall()
         registry = request_registry.RequestRegistry()
         
         if "yes" in SSL.lower():

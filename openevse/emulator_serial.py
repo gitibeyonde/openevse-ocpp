@@ -186,14 +186,13 @@ _states = {
     255: 'disabled'
 }
 _lcd_colors = ['off', 'red', 'green', 'yellow', 'blue', 'violet', 'teal', 'white']
-_status_functions = { 'FD' : 'disable', 'FE' : 'enable', 'FS' : 'sleep' }
+_state_function = { 'FD' : 255, 'FE' : 2, 'FS' : 254 , 'FR' : 2 }
 _lcd_types = ['monochrome', 'rgb']
 _service_levels = ['A', '1', '2']
 
 
 state=0
 lcd_color=4
-status=2
 # a Serial class emulator 
 class Serial:
     
@@ -231,19 +230,19 @@ class Serial:
                 time.sleep(1)
                 if cmdv is not None:
                     if cmdv[0] == 'Connect':
-                        print("Received start transaction on serial shm")
+                        print("Received Connect on serial shm")
                         self.update_status("$ST 2\r")
                         state=2
                     elif cmdv[0] == 'StartCharging':
-                        print("Reeceived start transaction on serial shm")
+                        print("Received StartCharging on serial shm")
                         self.update_status("$ST 3\r")
                         state=3
                     elif cmdv[0] == 'StopCharging':
-                        print("Reeceived stop transaction on serial shm")
+                        print("Received StopCharging on serial shm")
                         self.update_status("$ST 2\r")
                         state=2
                     elif cmdv[0] == 'Disconnect':
-                        print("Reeceived start transaction on serial shm")
+                        print("Received Disconnect on serial shm")
                         self.update_status("$ST 1\r")
                         state=1
                     else:
@@ -298,7 +297,7 @@ class Serial:
             print("Length of command is " + str(len(rv)))
         
         print(p1, p2)
-        if random.random() > 0.5:
+        if random.random() > 0.9:
             return self.encode("$NK 0 0") 
         if request_for == '$FF':
             response = "$OK 20"
@@ -307,17 +306,17 @@ class Serial:
             print("Backlight color is " + p1)
             lcd_color = int(p1)
         elif request_for == '$FD':
-            response =  "$OK 2"  #disable EVSE
-            status = _status_functions['FD']
+            state = _state_function['FD']
+            response =  "$OK " + hex(state)  #disable EVSE
         elif request_for == '$FE':
-            response =  "$OK 2"  #enable EVSE
-            status = _status_functions['FE']
+            state = _state_function['FE']
+            response =  "$OK " + hex(state)  #enable EVSE
         elif request_for == '$FS':
-            response =  "$OK 2"  #sleep EVSE
-            status = _status_functions['FS']
+            state = _state_function['FS']
+            response =  "$OK " + hex(state) #sleep EVSE
         elif request_for == '$FR':
-            response =  "$OK 2"  #reset EVSE
-            status = _status_functions(2)
+            state = _state_function['FR']
+            response =  "$OK " + hex(state) #reset EVSE
         elif request_for == '$FP':
             response =  "$OK 2"  #enable EVSE
             print("LCD " + p1 + " " + p2)

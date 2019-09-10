@@ -28,8 +28,8 @@ class ClientCall:
     CONFIG = "get_from_config"
     type=None # None, CmdLine, Serial, WebCmd
     
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
+        self.config = datastore.Datastore()
      
     def getBootNotification(self, registrationStatus=None):  # Pending, Accepted
         body = { 
@@ -154,8 +154,7 @@ class ClientCall:
         
         
 if __name__ == "__main__":
-    config = datastore.Datastore()
-    r = ClientCall(config)
+    r = ClientCall()
     print (r.getBootNotification())
     print (r.getHeartbeat())
     print (r.getStatusNotification(1, "Available", "NoError", "wtf", "1256"))

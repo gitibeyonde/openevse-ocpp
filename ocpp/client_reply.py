@@ -10,15 +10,21 @@ from datetime import datetime, timedelta
 import json
 import ast
 import uuid
+import pathlib
+import sys
 
+dir_path = str(pathlib.Path(__file__).resolve().parent.parent)
+sys.path.append(dir_path + '/common/')
+
+import datastore
 
 class ClientReply:
     config = None
     CONFIG = "get_from_config"
     TIMESTAMP = "get_current_timestamp"
     
-    def __init__(self, config):
-        self.config = config   
+    def __init__(self):
+        self.config = datastore.Datastore()
         
         
     """ ChangeAvailabilityResponse/ReserveNowResponse/CancelReservationRequest: { status: 'Accepted'}"""

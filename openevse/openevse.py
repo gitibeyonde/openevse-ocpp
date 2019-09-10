@@ -814,7 +814,7 @@ if SERIAL:
                     if response_match.group('status') == 'OK':
                         return True, (response_match.group('args') or '').split()
                     else:
-                        print("FATL: 817 reponse is NK");
+                        print("FATAL: 817 response is NK");
                         return response_match.group('status') == 'NK', (response_match.group('args') or '').split()
                 else:
                     if response[:3] == '$ST':
