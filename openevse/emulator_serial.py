@@ -186,7 +186,7 @@ _states = {
     255: 'disabled'
 }
 _lcd_colors = ['off', 'red', 'green', 'yellow', 'blue', 'violet', 'teal', 'white']
-_state_function = { 'FD' : 255, 'FE' : 2, 'FS' : 254 , 'FR' : 2 }
+_state_function = { 'FD' : 'ff', 'FE' : 2, 'FS' : 'fe', 'FR' : 2 }
 _lcd_types = ['monochrome', 'rgb']
 _service_levels = ['A', '1', '2']
 
@@ -307,16 +307,16 @@ class Serial:
             lcd_color = int(p1)
         elif request_for == '$FD':
             state = _state_function['FD']
-            response =  "$OK " + hex(state)  #disable EVSE
+            response =  "$OK " + str(state)  #disable EVSE
         elif request_for == '$FE':
             state = _state_function['FE']
-            response =  "$OK " + hex(state)  #enable EVSE
+            response =  "$OK " + str(state)  #enable EVSE
         elif request_for == '$FS':
             state = _state_function['FS']
-            response =  "$OK " + hex(state) #sleep EVSE
+            response =  "$OK " + str(state)  #sleep EVSE
         elif request_for == '$FR':
             state = _state_function['FR']
-            response =  "$OK " + hex(state) #reset EVSE
+            response =  "$OK " + str(state)  #reset EVSE
         elif request_for == '$FP':
             response =  "$OK 2"  #enable EVSE
             print("LCD " + p1 + " " + p2)
