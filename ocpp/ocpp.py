@@ -79,13 +79,13 @@ Process commands that are initiated from the server. Currently these are mainly 
 Extend these as per the functionality required.
 """
 def processServerCall(message_array):
-    print("Received server_Call " + str(mv[1]) + str(mv[2]))
     assert message_array[0] == 2
     
     muuid = message_array[1]
     cmd_name = message_array[2]
     body = message_array[3]
     
+    print("Received server_Call " + str(cmd_name) + str(body))
     if cmd_name == 'ReserveNow':
         # [2,"77cacf94-72f2-4e47-a4c7-380dec56b889","ReserveNow",{"connectorId":1,"expiryDate":"2017-10-31T17:09:00.000Z","idTag":"1234","reservationId":6}]
         serverCall = server_call.ServerCall(muuid, cmd_name, body)

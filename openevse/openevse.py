@@ -696,9 +696,9 @@ if SERIAL:
                 the new status, in text form (see the "states" dict)
             """
 
-            self.respose_regex = re.compile(
+            self.response_regex = re.compile(
                 '^\
-\\$(?P<status>(OK)|(NK))( (?P<args>.*?))?(:(?P<seq>[0123456789ABCDEF]{2}))?\\^(?P<csum>[0123456789ABCDEF]{2})\
+\\$(?P<status>(OK)|(NK)|(ST))( (?P<args>.*?))?(:(?P<seq>[0123456789ABCDEF]{2}))?\\^(?P<csum>[0123456789ABCDEF]{2})\
 \r$',
                 re.IGNORECASE
             )
@@ -800,7 +800,7 @@ if SERIAL:
                 self.newline_available.wait()
                 response = self.newline
                 self.newline_available.clear()
-                response_match = self.respose_regex.match(response)
+                response_match = self.response_regex.match(response)
                 if response_match is not None:
                     return response_match.group('status') == 'OK', (response_match.group('args') or '').split()
                 else:
@@ -808,10 +808,12 @@ if SERIAL:
             else:
                 response = self._read_line()
                 print ("810 response", response)
-                response_match = self.respose_regex.match(response)
+                response_match = self.response_regex.match(response)
                 print("812 response_match", response_match)
                 if response_match is not None:
                     if response_match.group('status') == 'OK':
+                        return True, (response_match.group('args') or '').split()
+                    elif response_match.group('status') == 'ST':
                         return True, (response_match.group('args') or '').split()
                     else:
                         print("FATAL: 817 response is NK");
