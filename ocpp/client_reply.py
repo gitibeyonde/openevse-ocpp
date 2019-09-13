@@ -3,6 +3,15 @@
 Created on 26-Oct-2017
 
 @author: aprateek
+
+
+MessageType = CALL
+MessageTypeNumber = 2
+Direction Client to Server
+
+This is a response to server initiated action.
+The status is usually Accepted, Rejected, Scheduled or Unknown
+
 '''
 
 

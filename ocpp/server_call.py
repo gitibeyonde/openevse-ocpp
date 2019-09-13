@@ -5,30 +5,40 @@ Created on 26-Oct-2017
 @author: aprateek
 '''
 
-
 from datetime import datetime, timedelta
 from dateutil import parser
 import json
 import ast
 import uuid
 
+""" 
+OCPP 1.6
 
-""" Change Configuration, Clear Cache, Data Transfer, Get Diagnostics, Get Local List Version, 
-Remote Start Transaction, Remote Stop Transaction,  Reset, Send Local List, Unlock Connector and Update Firmware. """
+MessageType = CALL
+MessageTypeNumber = 2
+Direction Server-to-client
+
+ServerCall are messages initiated from the OCPP server. The Charge Box executes these commands and this can result in change of status of the Charge Box.
+For example, Change Availability will stop the Charge Point.
+
+These commands are listed below:
+
+Change Availability, Change Configuration, Clear Cache, Data Transfer, Get Diagnostics, Get Local List Version, 
+Remote Start Transaction, Remote Stop Transaction,  Reset, Send Local List, Unlock Connector and Update Firmware. 
+
+"""
+
 
 class ServerCall:
     uuid = None
     body = None
     command = None
     
-    
-    
     def __init__(self, uuid, command, body):
         self.uuid = uuid
         self.command = command
         self.body = body
-        
-        
+    
     def getUuid(self):
         return self.uuid
     
@@ -55,7 +65,6 @@ class ServerCall:
         return self.body["idTag"]
     
     """CancelReservationRequest: {reservationId: 0 },"""
-    
     
     """ GetConfigurationRequest: { key: ['KVCBX_PROFILE'] }"""
     

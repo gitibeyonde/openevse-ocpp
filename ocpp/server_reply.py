@@ -7,7 +7,20 @@ Created on 26-Oct-2017
 CallResult type = 3 or 4
 [<MessageTypeId>, "<UniqueId>", {<Payload>}]
 
-Initiated by the central system: Cancel Reservation, Change Availability, Change Configuration, Clear Cache, Data Transfer, 
+
+Server responses for commands initiated from ChargePoint
+
+
+MessageType = CALLRESULT
+MessageTypeNumber = 3
+Direction Server-to-client
+
+MessageType = CALLERROR
+MessageTypeNumber = 4
+Direction Server-to-client
+Initiated by the central system: 
+
+    Cancel Reservation, Change Availability, Change Configuration, Clear Cache, Data Transfer, 
     Get Configuration, Get Diagnostics, Get Local List Version, Remote Start Transaction, Remote Stop Transaction, 
     Reserve Now, Reset, Send Local List, Unlock Connector and Update Firmware
 '''
@@ -29,21 +42,20 @@ class ServerReply:
     
     
     
-    def __init__(self, uuid, mtxt):
-        ma = ast.literal_eval(mtxt)
-        self.type = ma[0]
-        self.uuid = ma[1]
+    def __init__(self, message_array):
+        self.type = message_array[0]
+        self.uuid = message_array[1]
         if self.type == 1:
             print ("Error: Not allowed")
         elif self.type == 2:
             print ("Error: Request not expected, only replies are")
         elif self.type == 3:
             # [3,"c19023d3",{"currentTime":"2017-10-22T11:06:04.477Z"}]
-            self.body = ma[2]
+            self.body = message_array[2]
         elif self.type == 4:
             # [4,"c19023d3","InternalError","Internal services failed while processing of the payload","SQL [insert into `evc`.`connector_status` (`connector_pk`, `status_timestamp`, `status`, `error_code..."]
-            self.error_name = ma[2]
-            self.error_message = ma[3]
+            self.error_name = message_array[2]
+            self.error_message = message_array[3]
         else:
             self.type = -1
             
