@@ -12,7 +12,6 @@ import logging
 import traceback
 import json
 import ast
-import client_call
 import request_registry
 import client_call
 import client_reply
@@ -32,112 +31,169 @@ import openevse
 from async_com import AsyncCom 
 from state_machine import StateMachine
 
-
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 platform = platform.system()  # Linux, Darwin, Windows
 
 pid_file = dir_path + '/ocpp.pid'
 log_file_name = dir_path + '/http/slave/ocpp.html'
 uuid = None
 req = None
-registry = None
+registry = request_registry.RequestRegistry()
 conf = None
 ws = None
+openevse_serial = None
+
 SIP = os.popen('cat ../system.properties | grep ocpp_server  | cut -d"=" -f 2').read()
 SSL = os.popen('cat ../system.properties | grep ssl_enabled  | cut -d"=" -f 2').read()
 
 ocpp_cmd = AsyncCom(AsyncCom.OCPP_CMD_FILE)
 ocpp_resp = AsyncCom(AsyncCom.OCPP_RESP_FILE)
+clientReply = client_reply.ClientReply()
 
 sm = StateMachine()
 
+
 def on_message(ws, message):
     global registry
-    global server_resp
-    global client_cmd
+    global clientReply
     global conf
     
     try:
         logging.info("on_message=" + message)
         with open(log_file_name, 'a') as f: f.write('>>' + message + '</br>\n')
         mv = ast.literal_eval(message)
-        muuid = mv[1]
-        if mv[0] == 2: 
-            print("Received server_resp " + str(mv[1]) + str(mv[2]))  
-            if mv[2] == 'ReserveNow':
-                # [2,"77cacf94-72f2-4e47-a4c7-380dec56b889","ReserveNow",{"connectorId":1,"expiryDate":"2017-10-31T17:09:00.000Z","idTag":"1234","reservationId":6}]
-                cmd = server_reply.ServerReply(mv[1], mv[2], mv[3])
-                logging.info("Reservation Id " + str(cmd.getReservationId()))
-                logging.info("Reservation Expiry " + str(cmd.getReservationExpiry().utcnow()))
-                logging.info("Connector Id " + str(cmd.getReservationConnectorId()))
-                logging.info("Id Tag " + cmd.getReservationIdTag())
-                
-                conf.setReservation(cmd.getReservationId(), cmd.getReservationConnectorId(), cmd.getReservationIdTag(), utils.timestamp(cmd.getReservationExpiry()), utils.timestamp(datetime.utcnow()))
-        
-                sendReply(ws, server_resp.getStatus(mv[1], "Accepted"))
-            elif mv[2] == 'CancelReservation':
-                # [2,"54762587-30c9-4cbd-b1be-aa3458e089db","CancelReservation",{"reservationId":6}]
-                cmd = server_resp.ServerReply(mv[1], mv[2], mv[3])
-                logging.info("Reservation Id " + str(cmd.getReservationId()))
-                datastore.cancelReservation(cmd.getReservationId())
-                sendReply(ws, server_resp.getStatus(mv[1], "Accepted"))
-            elif mv[2] == 'ClearCache':
-                sendReply(ws, server_resp.getStatus(mv[1], "Accepted"))
-            elif mv[2] == 'GetConfiguration':
-                sendReply(ws, server_resp.getStatus(mv[1], "Accepted"))
-        elif mv[0] == 3:
-            logging.info("Received server_resp " + str(mv[2]))
-            cmd = registry.get(muuid)
-            cmd_name = cmd[2]
-            logging.info ("For server_resp name = " + cmd[2])
-            resp = server_reply.ServerReply(muuid, message)
-            if cmd_name == "BootNotification":
-                logging.info ("BootNotification=" + resp.getBootNotficationStatus())
-                logging.info ("HB Interval=" + str(resp.getHeartbeatInterval()))
-            elif cmd_name == "Heartbeat":
-                logging.info ("HB received Server time = " + str(resp.getCurrentTime()))
-            elif cmd_name == "StatusNotification":
-                logging.info ("StatusNotification received....")
-            elif cmd_name == "Authorize":
-                logging.info ("StatusNotification received...." + str(resp.getAuthorize()))
-                ocpp_resp.write(cmd_name, str(resp.getAuthorize()))
-                if resp.getAuthorize() != "Accepted": sm.reset()
-            elif cmd_name == "StartTransaction":
-                logging.info ("StatusNotification received...." + str(resp.getStatus()) + str(resp.getStartTransactionId()))
-                ocpp_resp.write(cmd_name, str(resp.getStartTransactionId()))
-                sm.startCharging(resp.getStartTransactionId())
-            elif cmd_name == "StopTransaction":
-                logging.info ("StopNotification received...." + str(resp.getStatus()))
-                ocpp_resp.write(cmd_name, str(resp.getStatus()))
-            else:
-                logging.info ("Unknown server_resp " + cmd_name)
-        elif mv[0] == 4:
-            cmd = registry.get(muuid)
-            cmd_name = cmd[2]
-            logging.info("FATAL  Error for server_resp " + cmd_name + ":" + str(mv[2]) + " == " + str(mv[3]))
-            if cmd_name == "BootNotification":
-                logging.warn ("Boot Notification Failed")
-            elif cmd_name == "Heartbeat":
-                logging.warn ("HB failed")
-            elif cmd_name == "StatusNotification":
-                logging.warn ("StatusNotification Failed")
-            elif cmd_name == "Authorize":
-                logging.warn ("Authorization Failed")
-                ocpp_resp.write(cmd_name, "Failed")
-                sm.reset()
-            elif cmd_name == "StartTransaction":
-                logging.warn ("StartTransaction Failed")
-                ocpp_resp.write(cmd_name, "Failed")
-            elif cmd_name == "StopTransaction":
-                logging.warn ("StopNotification Failed")
-                ocpp_resp.write(cmd_name, "Failed")
-            else:
-                logging.info ("Unknown server_resp " + cmd_name)
+        cmd_number = int(mv[0])
+        if cmd_number == 2:  #### CALLS FROM SERVER #######
+           processServerCall(mv)
+        elif cmd_number == 3:  #### SERVER RESPONSES ######
+            processServerResponse(mv)
+        elif cmd_number == 4:  ### ERRORS ####
+            processServerErrorResponse(mv)
+        else:
+            logging.fatal("Unknown cmd_number %d" %(cmd_number))
     except:
         logging.warn ("Bad server_resp ")
         traceback.print_exc()
-    
 
+"""
+Process commands that are initiated from the server. Currently these are mainly stubs.
+Extend these as per the functionality required.
+"""
+def processServerCall(message_array):
+    assert message_array[0] == 2
+    
+    muuid = message_array[1]
+    cmd_name = message_array[2]
+    body = message_array[3]
+    
+    print("Received server_Call " + str(cmd_name) + str(body))
+    if cmd_name == 'ReserveNow':
+        # [2,"77cacf94-72f2-4e47-a4c7-380dec56b889","ReserveNow",{"connectorId":1,"expiryDate":"2017-10-31T17:09:00.000Z","idTag":"1234","reservationId":6}]
+        serverCall = server_call.ServerCall(muuid, cmd_name, body)
+        logging.info("Reservation Id " + str(serverCall.getReservationId()))
+        logging.info("Reservation Expiry " + str(serverCall.getReservationExpiry().utcnow()))
+        logging.info("Connector Id " + str(serverCall.getReservationConnectorId()))
+        logging.info("Id Tag " + serverCall.getReservationIdTag())
+        conf.setReservation(serverCall.getReservationId(), serverCall.getReservationConnectorId(), serverCall.getReservationIdTag(), utils.timestamp(cmd.getReservationExpiry()), utils.timestamp(datetime.utcnow()))
+        sendReply(ws, clientReply.getStatus(muuid, "Accepted"))
+    elif cmd_name == 'CancelReservation':
+        # [2,"54762587-30c9-4cbd-b1be-aa3458e089db","CancelReservation",{"reservationId":6}]
+        serverCall = server_call.ServerCall(muuid, cmd_name, body)
+        logging.info("Reservation Id " + str(serverCall.getReservationId()))
+        datastore.cancelReservation(serverCall.getReservationId())
+        sendReply(ws, clientReply.getStatus(muuid, "Accepted"))
+    elif cmd_name == 'ClearCache':
+        sendReply(ws, clientReply.getStatus(muuid, "Accepted"))
+    elif cmd_name == 'GetConfiguration':
+        sendReply(ws, clientReply.getStatus(muuid, "Accepted"))
+    elif cmd_name == 'ChangeAvailability':
+        serverCall = server_call.ServerCall(muuid, cmd_name, body)
+        connectorId, type = serverCall.getChangeAvailability()
+        # ignoring connector id, as with OpenEVSE there is only one connector
+        if type == "Operative":
+            result = openevse_serial.status('enable')
+            if result == "connected":
+                logging.info("OpenEVSE response = %s" % result)
+                sendReply(ws, clientReply.getStatus(muuid, "Accepted"))
+        elif type == "Inoperative":
+            result = openevse_serial.status('disable')
+            if result == "disabled":
+                logging.info("OpenEVSE response = %s" % result)
+                sendReply(ws, clientReply.getStatus(muuid, "Accepted"))
+
+"""
+Process replies that come from the server in response to chargepoint actions. Currently these are mainly stubs.
+Extend these as per the functionality required.
+"""
+def processServerResponse(message_array):
+    #[3,"uuid",{body}]
+    global registry
+    
+    assert message_array[0] == 3
+    
+    muuid = message_array[1]
+    body = message_array[2]
+    
+    print("Received server_response %s" %str(body))
+    client_cmd = str(registry.getClientCallCommand(muuid)) # get the initiating client command from the registry
+    logging.info("Response from server %s for client call %s"%(str(body), client_cmd))
+    serverReply = server_reply.ServerReply(message_array)
+    if client_cmd == "BootNotification":
+        logging.info ("BootNotification=" + serverReply.getBootNotficationStatus())
+        logging.info ("HB Interval=" + str(serverReply.getHeartbeatInterval()))
+    elif client_cmd == "Heartbeat":
+        logging.info ("HB received Server time = " + str(serverReply.getCurrentTime()))
+    elif client_cmd == "StatusNotification":
+        logging.info ("StatusNotification received....")
+    elif client_cmd == "Authorize":
+        logging.info ("StatusNotification received...." + str(serverReply.getAuthorize()))
+        ocpp_resp.write(client_cmd, str(serverReply.getAuthorize()))
+        if serverReply.getAuthorize() != "Accepted": sm.reset()
+    elif client_cmd == "StartTransaction":
+        logging.info ("StatusNotification received...." + str(serverReply.getStatus()) + str(serverReply.getStartTransactionId()))
+        ocpp_resp.write(client_cmd, str(serverReply.getStartTransactionId()))
+        sm.startCharging(serverReply.getStartTransactionId())
+    elif client_cmd == "StopTransaction":
+        logging.info ("StopNotification received...." + str(serverReply.getStatus()))
+        ocpp_resp.write(client_cmd, str(serverReply.getStatus()))
+    else:
+        logging.info ("Unknown server_resp " + client_cmd)
+     
+
+"""
+Process errors that come from the server in response to chargepoint actions. Currently these are mainly stubs.
+Extend these as per the functionality required.
+"""
+def processServerErrorResponse(message_array):
+    global registry
+    assert message_array[0] == 4
+    
+    muuid = message_array[1]
+    body = message_array[2]
+    
+    print("Received server_Error %s" % str(body) )
+    client_cmd = registry.getClientCallCommand(muuid) 
+    logging.info("FATAL  Error %s for client_call %s "  %(body, client_cmd ))
+    if client_cmd == "BootNotification":
+        logging.warn ("Boot Notification Failed")
+    elif client_cmd == "Heartbeat":
+        logging.warn ("HB failed")
+    elif client_cmd == "StatusNotification":
+        logging.warn ("StatusNotification Failed")
+    elif client_cmd == "Authorize":
+        logging.warn ("Authorization Failed")
+        ocpp_resp.write(client_cmd, "Failed")
+        sm.reset()
+    elif client_cmd == "StartTransaction":
+        logging.warn ("StartTransaction Failed")
+        ocpp_resp.write(client_cmd, "Failed")
+    elif client_cmd == "StopTransaction":
+        logging.warn ("StopNotification Failed")
+        ocpp_resp.write(client_cmd, "Failed")
+    else:
+        logging.info ("Unknown server_resp %s" % client_cmd)
+                
+                
 def on_error(ws, error):
     logging.info("on_error: Error received %s" % error)
 
@@ -148,19 +204,19 @@ def on_close(ws):
 
 def on_open(ws):
     global uuid
-    global client_cmd
+    global clientCall
     global conf
     
     try:
-        sendRequest(ws, client_cmd.getBootNotification())
-        sendRequest(ws, client_cmd.getStatusNotification(1, "Available", "NoError", "", ""))
-        sendRequest(ws, client_cmd.getHeartbeat())
+        sendRequest(ws, clientCall.getBootNotification())
+        sendRequest(ws, clientCall.getStatusNotification(1, "Available", "NoError", "", ""))
+        sendRequest(ws, clientCall.getHeartbeat())
     
         def heartbeat(*args):
             while True:
                 try:
                     time.sleep(int(conf.getValue("heartbeatInterval")))
-                    sendRequest(ws, client_cmd.getHeartbeat()) 
+                    sendRequest(ws, clientCall.getHeartbeat()) 
                 except:
                     traceback.print_exc()
                     sys.exit()    
@@ -170,17 +226,17 @@ def on_open(ws):
                 cmdv = ocpp_cmd.read()
                 if cmdv is not None:
                     if cmdv[0] == 'Authorize':
-                        logging.info("Authenticate %s %s" % (client_cmd.getAuthorize(cmdv[1])))
-                        sendRequest(ws, client_cmd.getAuthorize(cmdv[1]))
+                        logging.info("Authenticate %s %s" % (clientCall.getAuthorize(cmdv[1])))
+                        sendRequest(ws, clientCall.getAuthorize(cmdv[1]))
                         sm.login(cmdv[1])
                     else:
                         logging.info("OCPP Unknown command %s" % cmdv)
 
         def checkOpenEvse():
             global tstore
+            global openevse
             
             logging.info("created= openevse.SerialOpenEVSE()")
-            openevse_serial = openevse.SerialOpenEVSE()
             while True:
                 try:
                     time.sleep(1)
@@ -192,37 +248,41 @@ def on_open(ws):
                     elif status == "connected":
                         logging.info("Status=%s" % status)
                         if sm.isCharging():
-                            sendRequest(ws, client_cmd.getStopTransaction(sm.getUsername(), sm.getTransactionId(), 20))
+                            sendRequest(ws, clientCall.getStopTransaction(sm.getUsername(), sm.getTransactionId(), 20))
                             sm.stopCharging()
                         else:
                             sm.connect()
-                            ocpp_resp.write("Connected", "Success")
                     elif status == "charging":
                         logging.info("Status=%s" % status)
-                        sendRequest(ws, client_cmd.getStartTransaction(sm.getUsername(), "0"))
+                        sendRequest(ws, clientCall.getStartTransaction(sm.getUsername(), "0"))
+                    elif status == "disabled":
+                        sm.disconnect()
+                        logging.info("Status=%s" % status)
+                    elif status == "enable":
+                        sm.connect()
+                        logging.info("Status=%s" % status)
                     elif status is not None:
                         logging.info("Status=%s" % status)
-                    else:
-                        pass
                 except:
                     logging.error("Exception occurred", exc_info=True)
                     continue
                     
-        #_thread.start_new_thread(heartbeat, ()) 
+        # _thread.start_new_thread(heartbeat, ()) 
         _thread.start_new_thread(processAuthCommand, ()) 
         _thread.start_new_thread(checkOpenEvse, ()) 
     except:
         traceback.print_exc()
         sys.exit()    
 
+
 def sendRequest(ws, uuid_message):
     global registry
     
-    cuuid, cmd = uuid_message
-    logging.info ("Sending Request " + json.dumps(cmd))
-    with open(log_file_name, 'a') as f: f.write('<<' + json.dumps(cmd) + '</br>\n')
-    registry.put(cuuid, cmd)
-    ws.send(json.dumps(cmd))
+    cuuid, cmdv = uuid_message
+    logging.info ("Sending Request " + json.dumps(cmdv))
+    with open(log_file_name, 'a') as f: f.write('<<' + json.dumps(cmdv) + '</br>\n')
+    registry.put(cuuid, cmdv)
+    ws.send(json.dumps(cmdv))
 
     
 def sendReply(ws, message):
@@ -234,18 +294,14 @@ def sendReply(ws, message):
 
 def main():
     global uuid
-    global client_cmd
-    global conf
-    global registry
-    global resp
-    global server_cmd
+    global clientCall
     global ws
+    global openevse_serial
     
     try:
+        openevse_serial = openevse.SerialOpenEVSE()
         uuid = utils.getUuid()
-        conf = datastore.Datastore()
-        client_cmd = client_call.ClientCall(conf)
-        registry = request_registry.RequestRegistry()
+        clientCall = client_call.ClientCall()
         
         if "yes" in SSL.lower():
             websocket.enableTrace(True)
@@ -275,10 +331,8 @@ if os.path.exists(pid_file) and os.path.getsize(pid_file) > 0:
         sys.exit(1)
 # If we get here, we know that the app is not running so we can start a new one...
 
-
-
-
 if __name__ == "__main__":
+
     try:
         pid = os.fork()
         if pid > 0:

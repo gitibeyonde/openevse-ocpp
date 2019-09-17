@@ -153,7 +153,7 @@ GV - get version
  *
  """
 
-import logging
+import logging, traceback
 import datetime
 import time
 import pathlib
@@ -162,7 +162,7 @@ import _thread
 import logging
 import random
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.WARN)
 
 dir_path = str(pathlib.Path(__file__).resolve().parent.parent)
 sys.path.append(dir_path + '/common/')
@@ -186,14 +186,13 @@ _states = {
     255: 'disabled'
 }
 _lcd_colors = ['off', 'red', 'green', 'yellow', 'blue', 'violet', 'teal', 'white']
-_status_functions = { 'FD' : 'disable', 'FE' : 'enable', 'FS' : 'sleep' }
+_state_function = { 'FD' : 'ff', 'FE' : 2, 'FS' : 'fe', 'FR' : 2 }
 _lcd_types = ['monochrome', 'rgb']
 _service_levels = ['A', '1', '2']
 
 
 state=0
 lcd_color=4
-status=2
 # a Serial class emulator 
 class Serial:
     
@@ -204,7 +203,6 @@ class Serial:
     def __init__( self, port='COM1', baudrate = 19200, timeout=1,
                   bytesize = 8, parity = 'N', stopbits = 1, xonxoff=0,
                   rtscts = 0):
-        logging.debug("Initilaizing emulated serial connection")
         self.name     = port
         self.port     = port
         self.timeout  = timeout
@@ -219,38 +217,53 @@ class Serial:
         self._response = None
         self.serial_cmd = AsyncCom(AsyncCom.SERIAL_CMD_FILE)
         
-        _thread.start_new_thread(self.processSerialCommands, ( (self.serial_cmd,) )) 
-        logging.debug("Initilaizing emulated serial connection")
+        _thread.start_new_thread(self.processSerialCommands, ((self.serial_cmd,))) 
+        logging.debug("Initialising emulated serial connection")
 
     #$OK State - 1 Not Connected - 2 Connected - 3 Charging - 4 Error - 5 Error
    
     def processSerialCommands(self, serialCmd):
         while True:
             try:
-                cmdv = serialCmd.read()
+                cmdv = serialCmd.read(2)
                 time.sleep(1)
                 if cmdv is not None:
                     if cmdv[0] == 'Connect':
-                        print("Received start transaction on serial shm")
+                        print("Received Connect on serial shm")
                         self.update_status("$ST 2\r")
                         state=2
                     elif cmdv[0] == 'StartCharging':
-                        print("Reeceived start transaction on serial shm")
+                        print("Received StartCharging on serial shm")
                         self.update_status("$ST 3\r")
                         state=3
                     elif cmdv[0] == 'StopCharging':
-                        print("Reeceived stop transaction on serial shm")
+                        print("Received StopCharging on serial shm")
                         self.update_status("$ST 2\r")
                         state=2
                     elif cmdv[0] == 'Disconnect':
-                        print("Reeceived start transaction on serial shm")
+                        print("Received Disconnect on serial shm")
                         self.update_status("$ST 1\r")
                         state=1
+                    elif cmdv[0] == 'Disable':
+                        print("Received Disable on serial shm")
+                        self.update_status("$ST ff\r")
+                        state=256
+                    elif cmdv[0] == 'Enable':
+                        print("Received Enable on serial shm")
+                        self.update_status("$ST 2\r")
+                        state=2
+                    elif cmdv[0] == 'Sleep':
+                        print("Received Sleep on serial shm")
+                        self.update_status("$ST fe\r")
+                        state=255
+                    elif cmdv[0] == 'Reset':
+                        print("Received Reset on serial shm")
+                        self.update_status("$ST 2\r")
+                        state=2
                     else:
                         logging.info("Unknown command %s" % cmdv[0])
-                else:
-                    pass
             except:
+                traceback.print_exc()
                 logging.error("Exception occurred", exc_info=True)
                 continue
                 
@@ -298,7 +311,7 @@ class Serial:
             print("Length of command is " + str(len(rv)))
         
         print(p1, p2)
-        if random.random() > 0.5:
+        if random.random() > 0.9:
             return self.encode("$NK 0 0") 
         if request_for == '$FF':
             response = "$OK 20"
@@ -307,19 +320,19 @@ class Serial:
             print("Backlight color is " + p1)
             lcd_color = int(p1)
         elif request_for == '$FD':
-            response =  "$OK 2"  #disable EVSE
-            status = _status_functions['FD']
+            state = _state_function['FD']
+            response =  "$ST " + str(state)  #disable EVSE
         elif request_for == '$FE':
-            response =  "$OK 2"  #enable EVSE
-            status = _status_functions['FE']
+            state = _state_function['FE']
+            response =  "$ST " + str(state)  #enable EVSE
         elif request_for == '$FS':
-            response =  "$OK 2"  #sleep EVSE
-            status = _status_functions['FS']
+            state = _state_function['FS']
+            response =  "$ST " + str(state)  #sleep EVSE
         elif request_for == '$FR':
-            response =  "$OK 2"  #reset EVSE
-            status = _status_functions(2)
+            state = _state_function['FR']
+            response =  "$ST " + str(state)  #reset EVSE
         elif request_for == '$FP':
-            response =  "$OK 2"  #enable EVSE
+            response =  "$ST 2"  #enable EVSE
             print("LCD " + p1 + " " + p2)
         elif request_for == '$G3':
             response =  "$OK 2"  # response: OK cnt

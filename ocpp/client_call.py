@@ -4,7 +4,11 @@ Created on 26-Oct-2017
 
 @author: aprateek
 
-CALL MESSAGES type=2
+MessageType = CALL
+MessageTypeNumber = 2
+Direction Client to Server
+
+
 [<MessageTypeId>, "<UniqueId>", "<Action>", {<Payload>}]
 
 Initiated by the charge point: Authorize, Boot Notification, Data Transfer, Diagnostics Status Notification, 
@@ -23,13 +27,14 @@ sys.path.append(dir_path + '/common/')
 
 import datastore
 
+
 class ClientCall:
     config = None
     CONFIG = "get_from_config"
-    type=None # None, CmdLine, Serial, WebCmd
+    type = None  # None, CmdLine, Serial, WebCmd
     
-    def __init__(self, config):
-        self.config = config
+    def __init__(self):
+        self.config = datastore.Datastore()
      
     def getBootNotification(self, registrationStatus=None):  # Pending, Accepted
         body = { 
@@ -69,8 +74,8 @@ class ClientCall:
             }
         return self.getText("StartTransaction", body)
      
-     #{"transactionId", "idTag", "timestamp", "meterStop", "reason", "transactionData" : 
-     #[{"timestamp", "sampledValue": {"value", "context", "format", "measurand", "phase", "location", "unit"}}, {"timestamp", "sampledValue"}]})
+     # {"transactionId", "idTag", "timestamp", "meterStop", "reason", "transactionData" : 
+     # [{"timestamp", "sampledValue": {"value", "context", "format", "measurand", "phase", "location", "unit"}}, {"timestamp", "sampledValue"}]})
     def getStopTransaction(self, idTag, transactionId, meterStop):
         body = {
                 "transactionId": str(transactionId),
@@ -80,7 +85,7 @@ class ClientCall:
             }
         return self.getText("StopTransaction", body)
     
-    #[2, id, "MeterValues", {"connectorId": 1, "transactionId": ssid, "meterValue": [{"timestamp": formatDate(new Date()), "sampledValue": [{"value": val}]}]}]);
+    # [2, id, "MeterValues", {"connectorId": 1, "transactionId": ssid, "meterValue": [{"timestamp": formatDate(new Date()), "sampledValue": [{"value": val}]}]}]);
     def getMeterValue(self, idTag, transactionId, connectorId, meterStop):
         body = {
             "connectorId" :  connectorId,
@@ -145,17 +150,16 @@ class ClientCall:
         for name in body:
             if body[name] == self.CONFIG:
                 body[name] = self.config.getValue(name)
-        cmd = []
-        cmd.append(2)
-        cmd.append(guid)
-        cmd.append(command)
-        cmd.append(body)
-        return guid, cmd
-        
-        
+        cmdv = []
+        cmdv.append(2)
+        cmdv.append(guid)
+        cmdv.append(command)
+        cmdv.append(body)
+        return guid, cmdv
+   
+            
 if __name__ == "__main__":
-    config = datastore.Datastore()
-    r = ClientCall(config)
+    r = ClientCall()
     print (r.getBootNotification())
     print (r.getHeartbeat())
     print (r.getStatusNotification(1, "Available", "NoError", "wtf", "1256"))

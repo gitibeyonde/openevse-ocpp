@@ -3,6 +3,15 @@
 Created on 26-Oct-2017
 
 @author: aprateek
+
+
+MessageType = CALL
+MessageTypeNumber = 2
+Direction Client to Server
+
+This is a response to server initiated action.
+The status is usually Accepted, Rejected, Scheduled or Unknown
+
 '''
 
 
@@ -10,15 +19,21 @@ from datetime import datetime, timedelta
 import json
 import ast
 import uuid
+import pathlib
+import sys
 
+dir_path = str(pathlib.Path(__file__).resolve().parent.parent)
+sys.path.append(dir_path + '/common/')
+
+import datastore
 
 class ClientReply:
     config = None
     CONFIG = "get_from_config"
     TIMESTAMP = "get_current_timestamp"
     
-    def __init__(self, config):
-        self.config = config   
+    def __init__(self):
+        self.config = datastore.Datastore()
         
         
     """ ChangeAvailabilityResponse/ReserveNowResponse/CancelReservationRequest: { status: 'Accepted'}"""
