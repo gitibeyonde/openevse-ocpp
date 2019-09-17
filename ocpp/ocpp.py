@@ -31,7 +31,7 @@ import openevse
 from async_com import AsyncCom 
 from state_machine import StateMachine
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.INFO)
 platform = platform.system()  # Linux, Darwin, Windows
 
 pid_file = dir_path + '/ocpp.pid'
@@ -41,12 +41,13 @@ req = None
 registry = request_registry.RequestRegistry()
 conf = None
 ws = None
+openevse_serial = None
+
 SIP = os.popen('cat ../system.properties | grep ocpp_server  | cut -d"=" -f 2').read()
 SSL = os.popen('cat ../system.properties | grep ssl_enabled  | cut -d"=" -f 2').read()
 
 ocpp_cmd = AsyncCom(AsyncCom.OCPP_CMD_FILE)
 ocpp_resp = AsyncCom(AsyncCom.OCPP_RESP_FILE)
-openevse_serial = openevse.SerialOpenEVSE()
 clientReply = client_reply.ClientReply()
 
 sm = StateMachine()
@@ -134,8 +135,8 @@ def processServerResponse(message_array):
     body = message_array[2]
     
     print("Received server_response %s" %str(body))
-    client_cmd = registry.getClientCallCommand(muuid) # get the initiating client command from the registry
-    logging.info("Response from server %s for client call %s"%(str(body), str(client_cmd) ))
+    client_cmd = str(registry.getClientCallCommand(muuid)) # get the initiating client command from the registry
+    logging.info("Response from server %s for client call %s"%(str(body), client_cmd))
     serverReply = server_reply.ServerReply(message_array)
     if client_cmd == "BootNotification":
         logging.info ("BootNotification=" + serverReply.getBootNotficationStatus())
@@ -146,17 +147,17 @@ def processServerResponse(message_array):
         logging.info ("StatusNotification received....")
     elif client_cmd == "Authorize":
         logging.info ("StatusNotification received...." + str(serverReply.getAuthorize()))
-        ocpp_resp.write(clientCall, str(serverReply.getAuthorize()))
+        ocpp_resp.write(client_cmd, str(serverReply.getAuthorize()))
         if serverReply.getAuthorize() != "Accepted": sm.reset()
     elif client_cmd == "StartTransaction":
         logging.info ("StatusNotification received...." + str(serverReply.getStatus()) + str(serverReply.getStartTransactionId()))
-        ocpp_resp.write(clientCall, str(serverReply.getStartTransactionId()))
+        ocpp_resp.write(client_cmd, str(serverReply.getStartTransactionId()))
         sm.startCharging(serverReply.getStartTransactionId())
     elif client_cmd == "StopTransaction":
         logging.info ("StopNotification received...." + str(serverReply.getStatus()))
-        ocpp_resp.write(clientCall, str(serverReply.getStatus()))
+        ocpp_resp.write(client_cmd, str(serverReply.getStatus()))
     else:
-        logging.info ("Unknown server_resp " + clientCall)
+        logging.info ("Unknown server_resp " + client_cmd)
      
 
 """
@@ -251,14 +252,17 @@ def on_open(ws):
                             sm.stopCharging()
                         else:
                             sm.connect()
-                            ocpp_resp.write("Connected", "Success")
                     elif status == "charging":
                         logging.info("Status=%s" % status)
                         sendRequest(ws, clientCall.getStartTransaction(sm.getUsername(), "0"))
+                    elif status == "disabled":
+                        sm.disconnect()
+                        logging.info("Status=%s" % status)
+                    elif status == "enable":
+                        sm.connect()
+                        logging.info("Status=%s" % status)
                     elif status is not None:
                         logging.info("Status=%s" % status)
-                    else:
-                        pass
                 except:
                     logging.error("Exception occurred", exc_info=True)
                     continue
@@ -292,8 +296,10 @@ def main():
     global uuid
     global clientCall
     global ws
+    global openevse_serial
     
     try:
+        openevse_serial = openevse.SerialOpenEVSE()
         uuid = utils.getUuid()
         clientCall = client_call.ClientCall()
         
@@ -326,6 +332,7 @@ if os.path.exists(pid_file) and os.path.getsize(pid_file) > 0:
 # If we get here, we know that the app is not running so we can start a new one...
 
 if __name__ == "__main__":
+
     try:
         pid = os.fork()
         if pid > 0:

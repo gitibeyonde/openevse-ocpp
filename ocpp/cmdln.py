@@ -17,7 +17,7 @@ serial_cmd = dir_path + '/http/slave/motion/scmd'
 serial_resp = dir_path + '/http/slave/motion/sresp'
 
 def help():
-    print("Commands: rfid <name>; Start; Stop;")
+    print("Commands: rfid <name>; start; stop; connect; disconnect; disable; enable;")
 
    
 ocpp_cmd = AsyncCom(AsyncCom.OCPP_CMD_FILE)
@@ -48,6 +48,18 @@ else:
         serial_cmd.write("Disconnect", [""])
         print("Disconnect sent")
         print(ocpp_resp.read())
+    elif cmdName == 'disable':
+        serial_cmd.write("Disable", [""])
+        print("Disable sent")
+        print(ocpp_resp.read())
+    elif cmdName == 'enable':
+        serial_cmd.write("Enable", [""])
+        print("Enable sent")
+        print(ocpp_resp.read())
+    elif cmdName == 'sleep':
+        serial_cmd.write("Sleep", [""])
+        print("Sleep sent")
+        print(ocpp_resp.read())
     elif cmdName.startswith('rfid'):
         if len(sys.argv) < 3:
             logging.info("You need to provide the rfid value as $rfid <value>")
@@ -56,7 +68,9 @@ else:
             response = ocpp_resp.read()
             if response is None:
                 print("User %s authentication failed" % sys.argv[2])
-            else: 
+            elif 'Invalid' in response: 
+                print("User %s authentication failed" % sys.argv[2])
+            else:
                 print("User %s authenticated" % sys.argv[2])
     elif cmdName == 'quit' or cmdName == 'exit':
         print("EVSE reset")

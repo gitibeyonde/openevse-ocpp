@@ -2,11 +2,11 @@
 import pathlib
 import sys
 import time
-import logging
+import logging, traceback
 from datetime import datetime, timedelta
 
 dir_path = str(pathlib.Path(__file__).resolve().parent.parent)
-logging.getLogger().setLevel(logging.INFO)
+logging.getLogger().setLevel(logging.WARN)
 
 class AsyncCom:
     async_file = None
@@ -32,19 +32,23 @@ class AsyncCom:
                 f.write(cmd + ":" + params)
             
     def read(self, timeout=5):
-        txt = None
-        start=int(time.time())
-        while txt is None:
-            delta = int(time.time())- start
-            if delta > timeout:break
-            time.sleep(0.5)
-            txt = open(self.async_file, 'r').read().rstrip('\n').split(":")
-            if (txt is not None and len(txt) > 0 and len(txt[0]) < 2 ): 
-                txt=None
-            else:
-                logging.info("%s >> %s" % (self.async_file, txt))
-        with open(self.async_file, 'w') as f: f.truncate()
-        return txt
+        try:
+            txt = None
+            start=int(time.time())
+            while txt is None:
+                delta = int(time.time())- start
+                if delta > timeout:break
+                time.sleep(0.5)
+                txt = open(self.async_file, 'r').read().rstrip('\n').split(":")
+                logging.debug("%s = %s"%(self.async_file, txt))
+                if (txt is not None and len(txt) > 0 and len(txt[0]) < 2 ): 
+                    txt=None
+                else:
+                    logging.info("%s >> %s" % (self.async_file, txt))
+            with open(self.async_file, 'w') as f: f.truncate()
+            return txt
+        except:
+            traceback.print_exc()
         
     def check(self):
         txt = open(self.async_file, 'r').read().rstrip('\n').split(":")

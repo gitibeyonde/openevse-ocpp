@@ -153,7 +153,7 @@ GV - get version
  *
  """
 
-import logging
+import logging, traceback
 import datetime
 import time
 import pathlib
@@ -162,7 +162,7 @@ import _thread
 import logging
 import random
 
-logging.getLogger().setLevel(logging.DEBUG)
+logging.getLogger().setLevel(logging.WARN)
 
 dir_path = str(pathlib.Path(__file__).resolve().parent.parent)
 sys.path.append(dir_path + '/common/')
@@ -203,7 +203,6 @@ class Serial:
     def __init__( self, port='COM1', baudrate = 19200, timeout=1,
                   bytesize = 8, parity = 'N', stopbits = 1, xonxoff=0,
                   rtscts = 0):
-        logging.debug("Initilaizing emulated serial connection")
         self.name     = port
         self.port     = port
         self.timeout  = timeout
@@ -218,15 +217,15 @@ class Serial:
         self._response = None
         self.serial_cmd = AsyncCom(AsyncCom.SERIAL_CMD_FILE)
         
-        _thread.start_new_thread(self.processSerialCommands, ( (self.serial_cmd,) )) 
-        logging.debug("Initilaizing emulated serial connection")
+        _thread.start_new_thread(self.processSerialCommands, ((self.serial_cmd,))) 
+        logging.debug("Initialising emulated serial connection")
 
     #$OK State - 1 Not Connected - 2 Connected - 3 Charging - 4 Error - 5 Error
    
     def processSerialCommands(self, serialCmd):
         while True:
             try:
-                cmdv = serialCmd.read()
+                cmdv = serialCmd.read(2)
                 time.sleep(1)
                 if cmdv is not None:
                     if cmdv[0] == 'Connect':
@@ -245,11 +244,26 @@ class Serial:
                         print("Received Disconnect on serial shm")
                         self.update_status("$ST 1\r")
                         state=1
+                    elif cmdv[0] == 'Disable':
+                        print("Received Disable on serial shm")
+                        self.update_status("$ST ff\r")
+                        state=256
+                    elif cmdv[0] == 'Enable':
+                        print("Received Enable on serial shm")
+                        self.update_status("$ST 2\r")
+                        state=2
+                    elif cmdv[0] == 'Sleep':
+                        print("Received Sleep on serial shm")
+                        self.update_status("$ST fe\r")
+                        state=255
+                    elif cmdv[0] == 'Reset':
+                        print("Received Reset on serial shm")
+                        self.update_status("$ST 2\r")
+                        state=2
                     else:
                         logging.info("Unknown command %s" % cmdv[0])
-                else:
-                    pass
             except:
+                traceback.print_exc()
                 logging.error("Exception occurred", exc_info=True)
                 continue
                 

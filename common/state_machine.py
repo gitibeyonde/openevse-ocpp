@@ -70,6 +70,15 @@ class StateMachine:
         tstore.setValue("state", 0)
         return True
     
+    def stop(self):
+        cur_state = self.getState()
+        if cur_state == 3:
+            print("Cannot stop while charging")
+            return False
+        print("Disabled")
+        tstore.setValue("state", 255)
+        return True
+    
     def transitionTo(self, next_state):
         cur_state = self.getState()
         next_state = self.getStateKey(next_state)
