@@ -158,7 +158,7 @@ import datetime
 import time
 import pathlib
 import sys
-import _thread
+import thread
 import logging
 import random
 
@@ -217,7 +217,7 @@ class Serial:
         self._response = None
         self.serial_cmd = AsyncCom(AsyncCom.SERIAL_CMD_FILE)
         
-        _thread.start_new_thread(self.processSerialCommands, ((self.serial_cmd,))) 
+        thread.start_new_thread(self.processSerialCommands, ((self.serial_cmd,))) 
         logging.debug("Initialising emulated serial connection")
 
     #$OK State - 1 Not Connected - 2 Connected - 3 Charging - 4 Error - 5 Error
@@ -294,6 +294,7 @@ class Serial:
         raise IOError
     
     def get_response(self, request):
+        global state
         request = request.decode("utf-8") 
         print("EVSE Command: ", request, request[0:3])
         #b'$FF E 0^51\r'
