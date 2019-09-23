@@ -319,6 +319,7 @@ def main():
                                         header=[ "Sec-WebSocket-Protocol: ocpp1.5"])
         ws.on_open = on_open
         ws.run_forever()
+        openevse_serial.lcd_backlight_color("teal")
     except:
         traceback.print_exc()
     
