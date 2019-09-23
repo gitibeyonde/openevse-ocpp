@@ -4,7 +4,7 @@ import openevse
 import time
 
 def callback(states):
-    print(states)
+    print("State is %s"%states)
 
 
 o = openevse.SerialOpenEVSE(status_callback=callback)

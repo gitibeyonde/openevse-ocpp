@@ -4,7 +4,7 @@ from pprint import pprint
 from datetime import datetime, timedelta
 from dateutil import parser
 import websocket
-import _thread
+import thread
 import time
 import os
 import sys
@@ -112,13 +112,13 @@ def processServerCall(message_array):
         # ignoring connector id, as with OpenEVSE there is only one connector
         if type == "Operative":
             result = openevse_serial.status('enable')
-            if result == "connected":
-                logging.info("OpenEVSE response = %s" % result)
+            logging.info("OpenEVSE response = %s" % result)
+            if "connect" in result:
                 sendReply(ws, clientReply.getStatus(muuid, "Accepted"))
         elif type == "Inoperative":
             result = openevse_serial.status('disable')
+            logging.info("OpenEVSE response = %s" % result)
             if result == "disabled":
-                logging.info("OpenEVSE response = %s" % result)
                 sendReply(ws, clientReply.getStatus(muuid, "Accepted"))
 
 """
@@ -267,9 +267,9 @@ def on_open(ws):
                     logging.error("Exception occurred", exc_info=True)
                     continue
                     
-        # _thread.start_new_thread(heartbeat, ()) 
-        _thread.start_new_thread(processAuthCommand, ()) 
-        _thread.start_new_thread(checkOpenEvse, ()) 
+        # thread.start_new_thread(heartbeat, ()) 
+        thread.start_new_thread(processAuthCommand, ()) 
+        thread.start_new_thread(checkOpenEvse, ()) 
     except:
         traceback.print_exc()
         sys.exit()    
