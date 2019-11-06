@@ -688,7 +688,7 @@ if SERIAL:
         the RAPI protocol.
         """
     
-        def __init__(self, port='/dev/ttyAMA0', baudrate=115200, status_callback=None):
+        def __init__(self, port='/dev/serial0', baudrate=115200, status_callback=None):
             """Initialize the serial connection to the OpenEVSE board
             status_callback: a function to call if a "status change" line ($ST xx)
                              is received
